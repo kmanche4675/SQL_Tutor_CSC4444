@@ -1,0 +1,31 @@
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Database files (optional – keep if you want to share schema but not data)
+*.db
+*.sqlite
+*.sqlite3
+
+# Streamlit cache
+.streamlit/
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs and temp files
+*.log
+*.tmp
+student_model.json
+logs.csv
+
+# OS junk
+.DS_Store
+Thumbs.db
