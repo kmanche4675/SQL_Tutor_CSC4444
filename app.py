@@ -1,6 +1,6 @@
 import streamlit as st
 from problems import get_problem, get_all_problems
-from evaluator import evaluate, generate_hint
+from evaluator import evaluate, generate_hint, generate_ai_hint  # added generate_ai_hint
 from student_model import load_model, update_knowledge, get_next_problem
 
 st.set_page_config(page_title="SQL Tutor", page_icon="📚")
@@ -55,8 +55,8 @@ departments (id, name, budget)
 
 student_query = st.text_area("Write your SQL query:", height=150, key="sql_input")
 
-# Three columns: Submit, Hint, Reset
-col1, col2, col3 = st.columns(3)
+# Four columns: Submit, Rule Hint, AI Hint, Reset
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     if st.button("Submit"):
@@ -85,14 +85,23 @@ with col1:
                     st.session_state.attempts[problem["id"]] += 1
 
 with col2:
-    if st.button("💡 Give me a hint"):
+    if st.button("💡 Rule Hint"):
         if not student_query.strip():
             st.warning("Write your query first, then ask for a hint.")
         else:
             hint = generate_hint(student_query, problem)
-            st.info(f"**Hint:** {hint}")
+            st.info(f"**Rule-based Hint:** {hint}")
 
 with col3:
+    if st.button("🤖 AI Hint (Ollama)"):
+        if not student_query.strip():
+            st.warning("Write your query first, then ask for a hint.")
+        else:
+            with st.spinner("🤖 Thinking..."):
+                ai_hint = generate_ai_hint(student_query, problem)
+                st.info(ai_hint)
+
+with col4:
     if st.button("Reset Problem"):
         # Remove this problem from completed set so it can be tried again
         st.session_state.completed.discard(problem["id"])

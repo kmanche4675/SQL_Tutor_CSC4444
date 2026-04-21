@@ -2,6 +2,7 @@ import sqlite3
 import pandas as pd
 import re
 from sqlglot import parse_one, errors
+import ollama  # <-- NEW: for local LLM hints
 
 DB_PATH = "database/tutor.db"
 
@@ -39,7 +40,7 @@ def generate_hint(student_query, problem):
         if "='" not in student_query and '="' not in student_query:
             return "💡 Hint: Strings in SQL need single quotes. For example: `WHERE department = 'Engineering'`."
     
-    # Pattern 5: Missing GROUP BY when using aggregate without WHERE filter on non-grouped column
+    # Pattern 5: Missing GROUP BY when using aggregate
     aggregates = ['COUNT(', 'SUM(', 'AVG(', 'MAX(', 'MIN(']
     has_aggregate = any(agg in query_upper for agg in aggregates)
     if has_aggregate and 'GROUP BY' not in query_upper:
@@ -55,13 +56,45 @@ def generate_hint(student_query, problem):
     
     return "💡 Hint: Your query ran but returned a different result than expected. Check your WHERE conditions, column names, and ensure you're selecting the right tables."
 
+def generate_ai_hint(student_query, problem, error_message=None):
+    """Generate a smart hint using local Ollama LLM"""
+    try:
+        # Build a prompt for the LLM
+        prompt = f"""You are a helpful SQL tutor. The student is solving:
+Problem: {problem['description']}
+Database schema:
+employees (id, name, department, salary, manager_id)
+departments (id, name, budget)
+
+Student's SQL query:
+{student_query}
+
+"""
+        if error_message:
+            prompt += f"The system returned this error: {error_message}\n\n"
+        else:
+            prompt += "The query ran but produced wrong results.\n\n"
+        
+        prompt += """Give a short, specific, encouraging hint (2-3 sentences) that helps the student understand what might be wrong. Do NOT give the full correct SQL. Focus on the concept or mistake."""
+        
+        response = ollama.chat(model='llama3.2', messages=[
+            {'role': 'user', 'content': prompt}
+        ])
+        hint = response['message']['content'].strip()
+        return f"🤖 AI Hint: {hint}"
+    except Exception as e:
+        # Fallback to rule-based hint if AI fails
+        print(f"AI hint failed: {e}")
+        return generate_hint(student_query, problem)
+
 def evaluate(problem, student_query):
     """Compare student's query result to expected result and return (correct, feedback)"""
     # Execute student query
     ok_student, student_result = execute_sql(student_query)
     if not ok_student:
-        hint = generate_hint(student_query, problem)
-        return False, f"**SQL Error:** {student_result}\n\n{hint}"
+        # Use AI hint for syntax errors too
+        ai_hint = generate_ai_hint(student_query, problem, student_result)
+        return False, f"**SQL Error:** {student_result}\n\n{ai_hint}"
     
     # Execute expected query
     ok_expected, expected_result = execute_sql(problem["expected_sql"])
@@ -80,11 +113,11 @@ def evaluate(problem, student_query):
     
     missing_cols = [c for c in cols if c not in student_result.columns]
     if missing_cols:
-        hint = generate_hint(student_query, problem)
-        return False, f"**Column mismatch:** Your query returned columns {list(student_result.columns)} but expected {cols}. Missing: {missing_cols}\n\n{hint}"
+        ai_hint = generate_ai_hint(student_query, problem, f"Missing columns. Expected {cols}, got {list(student_result.columns)}")
+        return False, f"**Column mismatch:** Your query returned columns {list(student_result.columns)} but expected {cols}. Missing: {missing_cols}\n\n{ai_hint}"
     
     if student_result[cols].equals(expected_result[cols]):
         return True, "✅ Correct! Great work."
     else:
-        hint = generate_hint(student_query, problem)
-        return False, f"**Wrong result.** Your output doesn't match the expected.\n\n{hint}"
+        ai_hint = generate_ai_hint(student_query, problem, "Query returned wrong results")
+        return False, f"**Wrong result.** Your output doesn't match the expected.\n\n{ai_hint}"
