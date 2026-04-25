@@ -1,5 +1,6 @@
 import json
 import os
+import math
 
 MODEL_FILE = "student_model.json"
 
@@ -17,15 +18,34 @@ PARAMS = {
     "null_handling": {"p_mastered": 0.1, "p_learn": 0.35, "p_guess": 0.2, "p_slip": 0.1},
 }
 
+def calculate_entropy(p):
+    """Calculate Shannon entropy as uncertainty measure (0 = certain, 1 = uncertain)"""
+    if p <= 0 or p >= 1:
+        return 0.0
+    return -p * math.log2(p) - (1 - p) * math.log2(1 - p)
+
+def calculate_confidence(count):
+    """Calculate confidence as function of evidence (observations). Returns 0-1."""
+    return min(0.95, count / (count + 5.0))
+
 def load_model():
     if os.path.exists(MODEL_FILE):
         with open(MODEL_FILE, 'r') as f:
-            return json.load(f)
+            model = json.load(f)
+            # Ensure all skills have observation counts (backward compatibility)
+            for skill in SKILLS:
+                if skill not in model:
+                    model[skill] = PARAMS[skill].copy()
+                    model[skill]["observation_count"] = 0
+                if "observation_count" not in model[skill]:
+                    model[skill]["observation_count"] = 0
+            return model
     else:
         # Initialize fresh model
         model = {}
         for skill in SKILLS:
             model[skill] = PARAMS[skill].copy()
+            model[skill]["observation_count"] = 0
         return model
 
 def save_model(model):
@@ -52,6 +72,9 @@ def update_knowledge(model, problem_skills, was_correct):
         p_learn = model[skill]["p_learn"]
         new_p = p_mastered_given_correct + (1 - p_mastered_given_correct) * p_learn
         model[skill]["p_mastered"] = min(1.0, new_p)
+        model[skill]["observation_count"] += 1
+        model[skill]["entropy"] = calculate_entropy(model[skill]["p_mastered"])
+        model[skill]["confidence"] = calculate_confidence(model[skill]["observation_count"])
     
     save_model(model)
     return model

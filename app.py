@@ -35,8 +35,29 @@ st.sidebar.divider()
 st.sidebar.header("📊 Your Skill Mastery")
 for skill, data in st.session_state.student_model.items():
     mastery = data["p_mastered"]
+    confidence = data.get("confidence", 0.0)
+    entropy = data.get("entropy", 0.0)
+    obs_count = data.get("observation_count", 0)
+    
     st.sidebar.progress(mastery)
-    st.sidebar.write(f"{skill}: {mastery:.0%}")
+    st.sidebar.write(f"**{skill}**: {mastery:.0%}")
+    st.sidebar.write(f"_Confidence: {confidence:.0%} | Obs: {obs_count}_")
+    if entropy > 0.5:
+        st.sidebar.write("⚠️ High uncertainty")
+    elif entropy < 0.1:
+        st.sidebar.write("✅ Well-established")
+    st.sidebar.write("---")
+
+# Detailed probability stats
+with st.sidebar.expander("🔍 Probability Details"):
+    st.write("**Bayesian Knowledge Tracing Stats:**")
+    for skill, data in st.session_state.student_model.items():
+        st.write(f"**{skill}:**")
+        st.write(f"- Mastery: {data['p_mastered']:.3f}")
+        st.write(f"- Confidence: {data.get('confidence', 0):.3f}")
+        st.write(f"- Entropy: {data.get('entropy', 0):.3f}")
+        st.write(f"- Observations: {data.get('observation_count', 0)}")
+        st.write("---")
 
 # Main area
 problem = get_problem(st.session_state.current_problem_id)
