@@ -204,7 +204,7 @@ This project fulfills all requirements for an intelligent agent:
 
 ## 📄 License
 
-This project is for educational use in CSC4444 at the University of [Lousiana State University].
+This project is for educational use in CSC4444 at the University of Lousiana State University.
 
 ---
 
