@@ -43,8 +43,7 @@ python -m venv venv
 
 python3 -m venv venv
 source venv/bin/activate
-
----
+```
 
 ## Step 3: Add the dependencies installation
 
@@ -53,7 +52,7 @@ source venv/bin/activate
 
 ```bash
 pip install -r requirements.txt
-
+```
 
 ---
 
@@ -64,7 +63,7 @@ pip install -r requirements.txt
 
 ```bash
 python database/init_db.py
-
+```
 
 ---
 
@@ -82,7 +81,7 @@ Ollama runs a local LLM on your machine – completely free, no API key required
 ollama pull llama3.2
 
 ollama list
-
+```
 
 ---
 
@@ -93,7 +92,7 @@ ollama list
 
 ```bash
 streamlit run app.py
-
+```
 
 ---
 
